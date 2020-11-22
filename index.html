@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html>
+<title>subnet</title>
+<head>
+<!--
+待開發項目
+1.NetMAsk 二進位選項
+2.NetMAsk 二進位選項 與IP二進位 做AND運算 等於 SubNetID
+3.CLASS ABC
+4.CIDR表示法
+5.table二進位，觀察子網路編號的被借位的位元當網路位址，可以被切割
+6.現有BUG: CLASS B C 表格進位問題
+-->
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">	
+<script>
+var s = new Array();//ip
+var s_2s = new Array();//ip轉二進位	
+var netID;//netMask for netID Bits
+		
+
+	
+function ShowValue(){     
+	try{
+		 s[1] = document.getElementById("i1").value ;
+		 s[2] = document.getElementById("i2").value ;
+		 s[3] = document.getElementById("i3").value ;
+		 s[4] = document.getElementById("i4").value ;
+		//防呆
+		var err = new Array();
+		for(var i = 1 ; i <= 4 ; i++) err[i] =""; //errMSg 
+		for(var i = 1 ; i <= 4 ; i++){
+			err[i] = checkInteger(s[i],err[i]);
+			err[i] = checkNumber(s[i],err[i]);
+			err[i] = checkNegative(s[i],err[i]);
+			err[i] = checkNull(s[i],err[i]);
+			err[i] = check0_255(s[i],err[i]);
+		}
+		if(err[1]!="" || err[2]!="" || err[3]!="" || err[4]!=""){
+		   var strMsg=""; //all errMSg 
+		   for(var i = 1 ; i <= 4 ; i++)
+				if(err[i]!="") strMsg+="IP第"+i+"段"+"錯誤，原因:"+err[i]+"\n\n";
+		   alert(strMsg);
+		   
+		}else network();
+	}catch{
+		alert("error,原因不明,請聯絡開發者");	
+	}
+}
+
+	//算subnet
+	function network(){
+		//reset
+		document.getElementById("MackBits").innerHTML="";
+		document.getElementById("subMask").innerHTML="";
+		document.getElementById("subMask2").innerHTML="";
+		document.getElementById("subBits").innerHTML="";
+		document.getElementById("MaximumSubnets").innerHTML="";
+		document.getElementById("hostsPerSubnet").innerHTML="";		
+		
+		
+		//Network Class
+		
+		
+		if(s[1]>=0 && s[1]<=127){
+		   document.getElementById("networkClass").innerHTML="ClassA";
+		   netID = 8;
+		}
+		else if(s[1]>=128 && s[1]<=191){
+		   document.getElementById("networkClass").innerHTML="ClassB";
+		   netID = 16;
+		}
+		else if(s[1]>=192 && s[1]<=223){
+		   document.getElementById("networkClass").innerHTML="ClassC";
+		   netID = 24;
+		}
+		else if(s[1]>=224 && s[1]<=239)
+		   document.getElementById("networkClass").innerHTML="ClassD";
+		else if(s[1]>=240 && s[1]<=255)
+		   document.getElementById("networkClass").innerHTML="ClassE";
+		
+		
+		//MackBits
+		for(var i =netID ; i<=32 ; i++)
+			document.getElementById("MackBits").innerHTML+= "<option value='"+ i +"'>"+ i +"</option>";
+		
+		//subMask子網路遮罩 	填入下拉選item
+		var StrMask_10s="";
+		var ArrMask_10s = new Array();
+		var StrMask_2s ="";
+		var ArrMask_2s = new Array();	
+		
+		for(var i =netID ; i<=32 ; i++)
+		{
+			//組合2進位，共32bit
+			for(var j = i ; j>0 ; j--) StrMask_2s +=1; 
+			for(var k = 32-i ; k>0 ; k--) StrMask_2s +=0;
+			
+			//將2進位IP拆成陣列型態4段
+			for(var x = 1 , y = 0 ; x<=4 ; x++, y=y+8 ) ArrMask_2s[x] = StrMask_2s.substr(y,8); 
+			
+			//將2進位IP轉為10進位
+			for(var x = 1; x<=4 ; x++) ArrMask_10s[x] = parseInt(ArrMask_2s[x], 2);//二進位轉十進位
+	
+			//組合10進位字串
+			for(var x = 1; x<=4 ; x++)StrMask_10s += ArrMask_10s[x] +".";
+			StrMask_10s=StrMask_10s.substring(0,StrMask_10s.length-1);//移除最後一碼 "."
+			
+			//輸出subMask子網路遮罩_10進位
+			document.getElementById("subMask").innerHTML+= "<option value='"+ i +"'>"+ StrMask_10s +"</option>";
+			
+			//輸出subMask子網路遮罩_2進位
+			document.getElementById("subMask2").innerHTML+= "<option value='"+ i +"'>"+ ArrMask_2s[1] +"."+ArrMask_2s[2] +"."+ArrMask_2s[3] +"."+ ArrMask_2s[4]  +"</option>";
+
+			
+			//reset
+			StrMask_2s = "";
+			StrMask_10s= "";
+		}
+		
+		//subBits主機位址的1所占位元
+		for(var i =netID ; i<=32 ; i++)
+			document.getElementById("subBits").innerHTML+= "<option value='"+ i +"'>"+ (i-netID) +"</option>";
+	
+		//MaximumSubnets最大子網路數目
+		for(var i =netID ; i<=32 ; i++)
+			document.getElementById("MaximumSubnets").innerHTML+= "<option value='"+ i +"'>"+ Math.pow(2, (i-netID)) +"</option>";
+	
+		
+		//Hosts per Subnet每個子網的主機
+		for(var i =netID ; i<=32 ; i++)
+			document.getElementById("hostsPerSubnet").innerHTML+= "<option value='"+ i +"'>"+ (Math.pow(2, (32-i))-2) +"</option>";
+	
+		//SubNetID子網路編號 broadcastAddress廣播位置  HostAddressRange主機位址範圍
+		CalculationAddress(netID);
+		
+		//computeSubMask
+
+		CalculationSubNetID(netID);
+		
+		//tblDefultCut
+		
+		if(s[1]>=0 && s[1]<=127){
+		   document.getElementById("tblDefultCut_class").innerHTML="ClassA";
+		   document.getElementById("tblDefultCut_Index_netID").innerHTML="8";
+		   document.getElementById("tblDefultCut_Index_hostID").innerHTML="24";
+			
+		   document.getElementById("tblMaskCut_class").innerHTML="ClassA";
+		   document.getElementById("tblMaskCut_Index_netID").innerHTML="8";
+			
+		   Maskcut(8);	
+			
+		}
+		else if(s[1]>=128 && s[1]<=191){
+		   document.getElementById("tblDefultCut_class").innerHTML="ClassB";
+		   document.getElementById("tblDefultCut_Index_netID").innerHTML="16";
+		   document.getElementById("tblDefultCut_Index_hostID").innerHTML="16";
+			
+		   document.getElementById("tblMaskCut_class").innerHTML="ClassB";
+		   document.getElementById("tblMaskCut_Index_netID").innerHTML="16";
+			
+		   Maskcut(16);
+		}
+		else if(s[1]>=192 && s[1]<=223){
+		   document.getElementById("tblDefultCut_class").innerHTML="ClassC";
+		   document.getElementById("tblDefultCut_Index_netID").innerHTML="24";
+		   document.getElementById("tblDefultCut_Index_hostID").innerHTML="8";
+
+		   document.getElementById("tblMaskCut_class").innerHTML="ClassC";
+		   document.getElementById("tblMaskCut_Index_netID").innerHTML="24";
+			
+		   Maskcut(24);	
+		}
+		
+	
+	}
+	
+	function Maskcut(item){
+		
+		document.getElementById("tblMaskCut_Index_hostID").innerHTML= (32 -item);
+		
+		if(s[1]>=0 && s[1]<=127){//CLASS A
+		   document.getElementById("tblMaskCut_Index_Mask").innerHTML= (item - 8);   
+		}
+		else if(s[1]>=128 && s[1]<=191){//CLASS B
+		   document.getElementById("tblMaskCut_Index_Mask").innerHTML= (item - 16);
+		}
+		else if(s[1]>=192 && s[1]<=223){// CALSS C
+		   document.getElementById("tblMaskCut_Index_Mask").innerHTML= (item - 24);
+		}
+	}
+	
+	function CalculationSubNetID(item){
+		//userInputIP
+		for(var x = 1; x<=4 ; x++) s_2s[x] = parseInt(s[x]).toString(2);//十進位轉二進位
+		for(var x = 1; x<=4 ; x++) s_2s[x] = padLeft(s_2s[x],8);//補零
+		
+		//selectMask
+		var selectMask = new Array();
+		var strItem = "";
+		for (var i = 1; i<=item ; i++) strItem += '1';
+		strItem = padRight(strItem, 32);
+		for(var x = 1 , y = 0 ; x<=4 ; x++, y=y+8 ){ //將2進位IP拆成陣列型態4段
+			selectMask[x] = strItem.substr(y,8); 
+		}
+		//計算結果inputIP  AND selectMask = subNetID
+		var resultIP = new Array();
+		var resultIP_10s = new Array();
+		var StrResultIP =""
+		var strIP = ""; //userInputIP
+		for (var i =1; i<=4;i++) strIP += s_2s[i];
+		for (var i= 0; i<32 ; i++){ //and運算
+			StrResultIP += parseInt(strIP.substr(i,1)) && parseInt(strItem.substr(i,1));
+		}
+		for(var x = 1 , y = 0 ; x<=4 ; x++, y=y+8 ){ //將2進位IP拆成陣列型態4段
+			resultIP[x] = StrResultIP.substr(y,8); 
+		}
+		for(var x = 1; x<=4 ; x++) resultIP_10s[x] = parseInt(resultIP[x], 2);//二進位轉十進位
+ 
+		
+		document.getElementById("computeSubMask").innerHTML = s_2s +" [ ip ]<br>";
+		document.getElementById("computeSubMask").innerHTML += selectMask + " [ Mask ]<br>";	
+		document.getElementById("computeSubMask").innerHTML += " ____________________________________________(AND運算)<br>";
+		document.getElementById("computeSubMask").innerHTML += resultIP +" [ SubNetID ]<br>";
+		document.getElementById("computeSubMask").innerHTML += resultIP_10s +" [ SubNetID(10s) ]";
+	}
+	
+	
+		/* 左邊補0 */
+	function padLeft(str, len) {
+		str = '' + str;
+		if (str.length >= len) {
+			return str;
+		} else {
+			return padLeft("0" + str, len);
+		}
+	}
+	/* 右邊補0 */
+	function padRight(str, len) {
+		str = '' + str;
+		if (str.length >= len) {
+			return str;
+		} else {
+			return padRight(str + "0", len);
+		}
+	}
+	
+	//SubNetID子網路編號 broadcastAddress廣播位置  HostAddressRange主機位址範圍
+	function CalculationAddress(item){
+        var StrAddressTable = "";
+        StrAddressTable = 
+			'<tr>'+
+				'<td>編號</td>'+
+				'<td>子網路編號</td>'+
+				'<td>主機位址範圍</td>'+
+				'<td>廣播位置</td>'+
+			'</tr>'+
+			'<tr>'+
+				'<td></td>'+
+				'<td>SubNetID</td>'+
+				'<td>HostAddressRange</td>'+
+				'<td>broadcastAddress</td>'+
+			'</tr>';
+		
+
+			var MaxAddress ; 	
+			if(netID == 8)  MaxAddress = 16777216;//classA
+			if(netID == 16)  MaxAddress = 65536;//classB
+			if(netID == 24)  MaxAddress = 256;////classC
+			
+			var AddressOfEachSubnet = Math.pow(2, (32-item));//每個子網路的位址
+			var SubNetID = new Array();
+			var HostID_start = new Array();
+			var HostID_end = new Array();
+			var BroadcastID = new Array();
+			var addressRange = new Array();//每段IP的差距
+		
+		     //init
+			 for(var i =1;i<=4;i++) SubNetID[i]=0;
+			 for(var i =1;i<=4;i++) HostID_start[i]=0;
+			 for(var i =1;i<=4;i++) HostID_end[i]=0;
+			 for(var i =1;i<=4;i++) BroadcastID[i]=0;
+			 for(var i =1;i<=4;i++) addressRange[i]=0;
+		
+			
+			 addressRange = bits2ip(AddressOfEachSubnet);//每段IP的差距
+			 IpAddBits(HostID_start,1);
+			 IpAddBits(HostID_end,(AddressOfEachSubnet -2 ));
+			 IpAddBits(BroadcastID,(AddressOfEachSubnet -1 ));
+		
+
+			//Class A & B & C
+			 BroadcastID[1] = HostID_end[1] = HostID_start[1] = SubNetID[1] = parseInt(s[1]);
+			//class C & B
+			 if(netID == 24 || netID == 16) BroadcastID[2] = HostID_end[2] = HostID_start[2] = SubNetID[2] = parseInt(s[2]);  
+			//class C  
+			 if(netID == 24) BroadcastID[3] = HostID_end[3] = HostID_start[3] = SubNetID[3] = parseInt(s[3]);  
+			
+		
+
+			 for(var i = 0 , j = 1 ; i< (MaxAddress-1)  ; i=i+ AddressOfEachSubnet ,j++)
+			 {
+				     var inRange = false;
+			     	 //如果IP在子網路範圍內，用不同顏色區隔(套用CSS)
+
+					 for(var x = 1 , y = i ; x <= AddressOfEachSubnet ; x++ , y++)
+					 {
+						rangeIP =  bits2ip(y);
+						if(netID == 8 && s[4] == rangeIP[4] && s[3] == rangeIP[3] && s[2] == rangeIP[2])//class A
+						{
+							inRange = true;
+							break;
+						} 
+						if(netID == 16 && s[4] == rangeIP[4] && s[3] == rangeIP[3])//class B
+						{
+							inRange = true;
+							break;
+						} 
+						if(netID == 24 && s[4] == rangeIP[4])//class C
+						{
+							inRange = true;
+							break;
+						}
+					 }
+				//套用 
+				if(inRange){	 
+					StrAddressTable +='<tr class="HtmlTr_IpIsHostAddressRange">';
+				}else{
+					StrAddressTable +='<tr>';
+				}
+				   
+				   
+				//輸出欄位 
+				StrAddressTable +=
+					'<td>'+ j +'</td>'+
+					'<td>'+ SubNetID +'</td>'+
+					'<td>'+ HostID_start +' ~ '+ HostID_end +'</td>'+
+					'<td>'+ BroadcastID +'</td>'+
+				'</tr>';
+				 
+				 //異動
+				 SubNetID = IpAddIp(SubNetID,addressRange);
+				 HostID_start = IpAddIp(HostID_start,addressRange);
+				 HostID_end = IpAddIp(HostID_end,addressRange);
+				 BroadcastID = IpAddIp(BroadcastID,addressRange);		
+				 
+				 
+			 }
+        
+		      document.getElementById("addressTable").innerHTML= StrAddressTable;
+	}	
+	
+	//輸入:bits
+    //輸出:ip
+    function bits2ip(bits){
+        //JS無整數 - 整數加法要用parseInt
+         var addressRange = new Array();//ip
+         addressRange[1] = 0;
+         addressRange[2] = parseInt(parseInt(bits / 256) / 256);  //第二段
+         addressRange[3] = parseInt(bits / 256) % 256 ; //第三段
+         addressRange[4] = bits % 256 % 256;  //第四段   
+         return  addressRange;               
+    }
+
+         var IP= new Array();
+         for(var i =1;i<=4;i++) IP[i]=0;//init
+	
+    //輸入:IP + bits
+    //輸出:ip
+     function IpAddBits(IP,bits){
+		 var addressRange = new Array();//bits convent ip
+         addressRange[1] = 0;//第一段IP
+         addressRange[2] = parseInt(parseInt(bits / 256) / 256); //第二段IP
+         addressRange[3] = parseInt(bits / 256) % 256 ; //第三段IP
+         addressRange[4] = bits % 256 % 256;  //第四段   IP
+
+         IP[4]+= addressRange[4];
+         if(IP[4]>=256){
+             IP[3] += parseInt(IP[4]/256);
+             IP[4] =  IP[4]%256;
+         }                  
+         IP[3]+= addressRange[3];
+         if(IP[3]>=256){
+             IP[2] += parseInt(IP[3]/256);
+             IP[3] =  IP[3]%256;
+         }             
+         IP[2]+= addressRange[2];
+         	return IP;
+      }
+    
+	
+	     var IP2= new Array();
+         for(var i =1;i<=4;i++) IP2[i]=1;//init
+	
+	//輸入:iP + ip
+    //輸出:ip
+     function IpAddIp(outputIP,IP){
+
+         outputIP[4]+= IP[4];
+         if(outputIP[4]>=256){
+             outputIP[3] += parseInt(outputIP[4]/256);
+             outputIP[4] =  outputIP[4]%256;
+         }                  
+         outputIP[3]+= IP[3];
+         if(outputIP[3]>=256){
+             outputIP[2] += parseInt(outputIP[3]/256);
+             outputIP[3] =  outputIP[3]%256;
+         }             
+         outputIP[2]+= IP[2];
+         	return outputIP;
+      }
+	
+//check
+    function checkInteger(input,output){
+        if(Math.floor(input) != input && input % 1 !== 0){
+            return output+="不可輸入小數。";
+        }else{
+            return output;    
+        }
+    }
+    function checkNumber(input,output){
+        if(isNaN(input)){
+               output+="請輸入數字(半形)。"; 
+               return output;
+        }else{
+               return output;
+        }
+    }
+	    function checkNegative(input,output){
+        if(input<0){
+             output+="不可輸入負數。";  
+             return output;
+        }else{
+             return output;
+        }
+    }
+	    function checkNull(input,output){
+        if(input==""){
+             output+="不可輸入空值。";  
+             return output;
+        }else{
+             return output;
+        }
+	}
+			
+		function check0_255(input,output){
+        if(input>255 || input<-1){
+		//if(!(input<=255 && input>=-1)){	
+             output+="不可輸入超出0~255。";  
+             return output;
+        }else{
+             return output;
+        }
+    }
+	
+	function random(){
+		//document.getElementById("i1").value = Math.floor(Math.random() * 32 )+ 192;//192~223
+		document.getElementById("i1").value = Math.floor(Math.random() * 223);//0~223
+		document.getElementById("i2").value = Math.floor(Math.random() * 256);
+		document.getElementById("i3").value = Math.floor(Math.random() * 256);
+		document.getElementById("i4").value = Math.floor(Math.random() * 256);	
+	}
+    
+	function _clear(){
+		document.getElementById("i1").value = "";
+		document.getElementById("i2").value = "";
+		document.getElementById("i3").value = "";
+		document.getElementById("i4").value = "";	
+	}
+	
+	function chageItem(selectObject){
+		var  itemValue = selectObject.value;
+		document.getElementById('MackBits').value = itemValue;
+		document.getElementById('subMask').value = itemValue;
+		document.getElementById('subMask2').value = itemValue;
+		document.getElementById('subBits').value = itemValue;
+		document.getElementById('MaximumSubnets').value = itemValue;
+		document.getElementById('hostsPerSubnet').value = itemValue;
+		Maskcut(itemValue);
+		CalculationAddress(itemValue);
+		CalculationSubNetID(itemValue);
+	}
+	
+	function getPrivateIpClassA(){
+		document.getElementById("i1").value = "10";
+		document.getElementById("i2").value = "0";
+		document.getElementById("i3").value = "0";
+		document.getElementById("i4").value = "1";	
+	}
+	function getPrivateIpClassB(){
+		document.getElementById("i1").value = "172";
+		document.getElementById("i2").value = "16";
+		document.getElementById("i3").value = "0";
+		document.getElementById("i4").value = "1";	
+	}
+	function getPrivateIpClassC(){
+		document.getElementById("i1").value = "192";
+		document.getElementById("i2").value = "168";
+		document.getElementById("i3").value = "0";
+		document.getElementById("i4").value = "1";	
+	}
+</script>
+<style>
+	*{
+		margin: 0;
+		padding: 0;
+		font-family: '微軟正黑體';
+	}
+	.s1{
+		margin: 5px;
+		float: left;
+		font-size:20px;
+		width: 35px;
+		
+	}
+	.s2{
+		margin: 5px;
+		float: left;
+		font-size:20px;
+		width: 5px;
+	}
+	.content1{
+		width:50%;
+		float: left;
+		padding-left: 5%;
+		box-sizing:border-box;	
+	}
+	.content2{
+		width:50%;
+		float: left;
+	}
+	
+	.button1{
+		font-size: 18px;
+	}
+	.ip:after{
+		content: '';
+		display: block;
+		clear: both;
+	}
+	.addressTable {
+  		border-collapse: collapse;
+	}
+	.addressTable tr td {
+		border:1px solid #666;
+		text-align: center;
+		padding: 5px;
+	}
+	.addressTable tr td:nth-child(3) {  /*主機範圍*/
+		width:300px;
+	}
+	.HtmlTr_IpIsHostAddressRange{
+		background-color: cornsilk;
+	}
+	
+	
+	.tblCut,.tblCut tr,.tblCut td 
+	{
+		border: 1px solid black;	
+	}
+	
+	.tblCut{
+		border-collapse: collapse;
+	}
+	
+	.tblCut td{
+		padding: 5px;
+	}
+	
+	.tblCut_digitalIndex{
+		float:left;
+		width: 30%;
+	}
+	
+	.tblCut_digitalBase{
+		float:left;
+		width:40%;
+		font-size: 25px;
+	}
+	
+	@media (max-width: 600px){
+		.content1, .content2{
+			width: 100%;
+		}
+		.addressTable tr td:nth-child(3) {  /*主機範圍*/
+			width:150px;
+		}
+	}
+	
+</style>	
+</head>	
+<body>
+	<div class="content1">
+		<!-----------輸入1------------>
+		<P>請輸入IP</P>
+		<div class="ip">
+			<input type="text" id="i1" class="s1"><span class="s2">.</span>
+			<input type="text" id="i2" class="s1"><p class="s2">.</p>
+			<input type="text" id="i3" class="s1"><p class="s2">.</p>
+			<input type="text" id="i4" class="s1">
+		</div>
+		<br>
+		<button onclick="ShowValue()" class="button1">填完IP按我送出</button>  
+		<button onclick="random()"  class="button1">隨機值</button>
+		<button onclick="_clear()"  class="button1">清除</button>
+		<br><br>
+		<button onclick="getPrivateIpClassA()"  class="button1">getPrivateIpClassA</button>10.0.0.0 - 10.255.255.255<br>
+		<button onclick="getPrivateIpClassB()"  class="button1">getPrivateIpClassB</button>172.16.0.0 - 172.31.255.255<br>
+		<button onclick="getPrivateIpClassC()"  class="button1">getPrivateIpClassC</button>192.168.0.0 - 192.168.255.255<br>
+		<br>
+		<!-----------輸入2------------>
+		Network Class:<p id="networkClass"></p><br>
+		
+		Mack Bits:<select id="MackBits"  onchange="chageItem(this)"></select>
+		<p>二進位Mack的1有多少位元</p><br>
+		
+		Sub Mask(NetMask):<select id="subMask"  onchange="chageItem(this)"></select>
+		<p>子網路遮罩 十進位</p><br>
+		<br>
+		
+		Sub Mask(NetMask):<select id="subMask2"  onchange="chageItem(this)"></select>
+		<p>子網路遮罩 二進位</p><br>
+		<br>
+		
+		Subnet Bits:<select id="subBits"  onchange="chageItem(this)"></select>
+		<p> 子網路遮罩所占位元</p><br>
+		<br>
+		
+		Maximum Subnets:<select id="MaximumSubnets"  onchange="chageItem(this)"></select>
+		<p>最大子網路數目</p><br>
+		<br>
+		
+		Hosts per Subnet:<select id="hostsPerSubnet"  onchange="chageItem(this)"></select>
+		<p>每個子網路的主機數量</p><br>
+		<br>
+		
+		computeSubMask:<div id="computeSubMask"></div><br>
+		<br>
+		
+		DefultCut:
+		<table class="tblCut">
+			<tr>
+				<td>Network Class</td>
+				<td>netID</td>
+				<td>hostID</td>
+			</tr>
+			<tr>
+				<td id="tblDefultCut_class"></td>
+				<td><div class="tblCut_digitalBase">2</div><div id="tblDefultCut_Index_netID" class="tblCut_digitalIndex"></div></td>
+				<td><div class="tblCut_digitalBase">2</div><div id="tblDefultCut_Index_hostID" class="tblCut_digitalIndex"></div></td>
+			</tr>
+		</table>
+		<br>
+				MaskCut:
+		<table class="tblCut">
+			<tr>
+				<td>Network Class</td>
+				<td>netID</td>
+				<td>MaskID</td>
+				<td>hostID</td>
+			</tr>
+			<tr>
+				<td id="tblMaskCut_class"></td>
+				<td><div class="tblCut_digitalBase">2</div><div id="tblMaskCut_Index_netID" class="tblCut_digitalIndex"></div></td>
+				<td><div class="tblCut_digitalBase">2</div><div id="tblMaskCut_Index_Mask" class="tblCut_digitalIndex"></div></td>
+				<td><div class="tblCut_digitalBase">2</div><div id="tblMaskCut_Index_hostID" class="tblCut_digitalIndex"></div></td>
+			</tr>
+		</table>
+	</div>	
+	<div class="content2">
+		<!-----------輸出----------->		
+		<table id="addressTable" class="addressTable"><!--初始樣式,按下按鈕會被蓋掉-->
+			<tr>
+				<td>編號</td>
+				<td>子網路編號(網段)</td>
+				<td>主機位址範圍(網域)</td>
+				<td>廣播位置</td>
+			</tr>
+			<tr>
+				<td></td>
+				<td>SubNetID</td>
+				<td>HostAddressRange</td>
+				<td>broadcastAddress</td>
+			</tr>
+		</table>
+		
+		
+	</div>
+</body>
+</html>
+
